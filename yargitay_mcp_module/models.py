@@ -1,6 +1,6 @@
 # yargitay_mcp_module/models.py
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 class YargitayDetailedSearchRequest(BaseModel):
@@ -43,8 +43,10 @@ class YargitayApiDecisionEntry(BaseModel):
     arananKelime: Optional[str] = Field(None, alias="arananKelime", description="Matched keyword in the search result item.")
     # 'index' and 'siraNo' from API response are not critical for MCP tool, so omitted for brevity
     
-    # This field will be populated by the client after fetching the search list
-    document_url: Optional[HttpUrl] = Field(None, description="Direct URL to the decision document.")
+    # Assigned by the client after fetching the search list. Stored as plain str
+    # so pydantic 2 doesn't warn during JSON serialization (HttpUrl is no longer
+    # a str subclass in pydantic 2).
+    document_url: Optional[str] = Field(None, description="Direct URL to the decision document.")
 
     class Config:
         populate_by_name = True # To allow populating by alias from API response
@@ -66,7 +68,7 @@ class YargitayDocumentMarkdown(BaseModel):
     """Model for a Yargitay decision document, containing only Markdown content."""
     document_id: str = Field(..., description="The unique ID of the document.")
     markdown_content: Optional[str] = Field(None, description="The decision content converted to Markdown.")
-    source_url: HttpUrl = Field(..., description="The source URL of the original document.")
+    source_url: str = Field(..., description="The source URL of the original document.")
 
 class CompactYargitaySearchResult(BaseModel):
     """A more compact search result model for the MCP tool to return."""

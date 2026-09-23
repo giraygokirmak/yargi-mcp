@@ -1,6 +1,6 @@
 # emsal_mcp_module/models.py
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 class EmsalDetailedSearchRequestData(BaseModel):
@@ -73,7 +73,7 @@ class EmsalApiDecisionEntry(BaseModel):
     durum: Optional[str] = Field(None, description="Status of the decision (e.g., 'KESİNLEŞMEDİ').")
     # index: Optional[int] = None # Present in Emsal response, can be added if tool needs it
 
-    document_url: Optional[HttpUrl] = Field(None, description="URL to the full document, constructed by the client.")
+    document_url: Optional[str] = Field(None, description="URL to the full document, constructed by the client. Stored as plain str to keep pydantic 2 serializers happy.")
 
     class Config:
         extra = 'ignore'
@@ -94,7 +94,7 @@ class EmsalDocumentMarkdown(BaseModel):
     """Model for an Emsal decision document, containing only Markdown content."""
     document_id: str
     markdown_content: Optional[str] = Field(None, description="The decision content converted to Markdown.")
-    source_url: HttpUrl
+    source_url: str
 
 class CompactEmsalSearchResult(BaseModel):
     """A compact search result model for the MCP tool to return."""

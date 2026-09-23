@@ -1,6 +1,6 @@
 # uyusmazlik_mcp_module/models.py
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from enum import Enum
 
@@ -72,8 +72,10 @@ class UyusmazlikApiDecisionEntry(BaseModel):
     uyusmazlik_konusu: Optional[str] = Field(None)
     karar_sonucu: Optional[str] = Field(None)
     popover_content: Optional[str] = Field(None, description="Summary/description from popover.")
-    document_url: HttpUrl # Full URL to the decision document HTML page
-    pdf_url: Optional[HttpUrl] = Field(None, description="Direct URL to PDF if available.")
+    # Stored as plain str (pydantic 2 HttpUrl is not a str subclass and triggers
+    # serializer warnings when assigned from a Python string).
+    document_url: str
+    pdf_url: Optional[str] = Field(None, description="Direct URL to PDF if available.")
 
 class UyusmazlikSearchResponse(BaseModel): # This is what the MCP tool will return
     """Response model for Uyuşmazlık Mahkemesi search results for the MCP tool."""
@@ -82,5 +84,5 @@ class UyusmazlikSearchResponse(BaseModel): # This is what the MCP tool will retu
 
 class UyusmazlikDocumentMarkdown(BaseModel):
     """Model for an Uyuşmazlık decision document, containing only Markdown content."""
-    source_url: HttpUrl # The URL from which the content was fetched
+    source_url: str # The URL from which the content was fetched
     markdown_content: Optional[str] = Field(None, description="The decision content converted to Markdown.")

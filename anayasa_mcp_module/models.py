@@ -1,6 +1,6 @@
 # anayasa_mcp_module/models.py
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from enum import Enum
 
@@ -150,7 +150,7 @@ class AnayasaDocumentMarkdown(BaseModel):
     Model for an Anayasa Mahkemesi (Norm Denetimi) decision document, containing a chunk of Markdown content
     and pagination information.
     """
-    source_url: HttpUrl
+    source_url: str
     decision_reference_no_from_page: Optional[str] = Field(None, description="E.K. No parsed from the document page.")
     decision_date_from_page: Optional[str] = Field(None, description="Decision date parsed from the document page.")
     official_gazette_info_from_page: Optional[str] = Field(None, description="Official Gazette info parsed from the document page.")
@@ -199,7 +199,7 @@ class AnayasaBireyselBasvuruDocumentMarkdown(BaseModel):
     Model for an Anayasa Mahkemesi (Bireysel Başvuru) decision document, containing a chunk of Markdown content
     and pagination information. Fetched from /BB/YYYY/NNNN paths.
     """
-    source_url: HttpUrl
+    source_url: str
     basvuru_no_from_page: Optional[str] = Field(None, description="Başvuru Numarası (B.No) parsed from the document page.")
     karar_tarihi_from_page: Optional[str] = Field(None, description="Decision date parsed from the document page.")
     basvuru_tarihi_from_page: Optional[str] = Field(None, description="Application date parsed from the document page.")

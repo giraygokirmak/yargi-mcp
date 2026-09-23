@@ -1,6 +1,6 @@
 # danistay_mcp_module/models.py
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 class DanistayBaseSearchRequest(BaseModel):
@@ -84,7 +84,7 @@ class DanistayApiDecisionEntry(BaseModel):
     # index: Optional[int] = None # Present in response, can be added if needed by MCP tool
     # siraNo: Optional[int] = None # Present in detailed response, can be added
 
-    document_url: Optional[HttpUrl] = Field(None, description="URL to the full document, constructed by the client.")
+    document_url: Optional[str] = Field(None, description="URL to the full document, constructed by the client. Stored as plain str to keep pydantic 2 serializers happy.")
 
     class Config:
         populate_by_name = True # Important for alias to work
@@ -106,7 +106,7 @@ class DanistayDocumentMarkdown(BaseModel):
     """Model for a Danistay decision document, containing only Markdown content."""
     document_id: str
     markdown_content: Optional[str] = Field(None, description="The decision content converted to Markdown.")
-    source_url: HttpUrl
+    source_url: str
 
 class CompactDanistaySearchResult(BaseModel):
     """A compact search result model for the MCP tool to return."""
