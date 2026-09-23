@@ -3,11 +3,13 @@
 import httpx
 from bs4 import BeautifulSoup 
 from typing import Dict, Any, List, Optional
+import asyncio
 import logging
 import html
 import re
 import tempfile
 import os
+from urllib.parse import quote
 from markitdown import MarkItDown
 
 from .models import (
@@ -108,7 +110,16 @@ class DanistayApiClient:
             if api_response_parsed.data and api_response_parsed.data.data:
                 for decision_item in api_response_parsed.data.data:
                     if decision_item.id:
-                        decision_item.document_url = f"{self.BASE_URL}{self.DOCUMENT_ENDPOINT}?id={decision_item.id}"
+                        # /getDokuman also wants the `arananKelime` query param
+                        # (upstream rejects with 'Required request parameter
+                        # arananKelime ... not present' since 2026). Include the
+                        # keyword the search used; fall back to a dot if empty so
+                        # the call stays valid.
+                        kw = getattr(decision_item, "arananKelime", None) or "."
+                        decision_item.document_url = (
+                            f"{self.BASE_URL}{self.DOCUMENT_ENDPOINT}"
+                            f"?arananKelime={quote(kw, safe='')}&id={decision_item.id}"
+                        )
             return api_response_parsed
         except httpx.RequestError as e:
             logger.error(f"DanistayApiClient: HTTP request error during search to {endpoint}: {e}")
@@ -155,12 +166,25 @@ class DanistayApiClient:
         
         return markdown_text
 
-    async def get_decision_document_as_markdown(self, document_id: str) -> DanistayDocumentMarkdown:
+    async def _convert_html_async(self, html_content: str) -> Optional[str]:
+        return await asyncio.to_thread(self._convert_html_to_markdown_danistay, html_content)
+
+    async def get_decision_document_as_markdown(
+        self,
+        document_id: str,
+        keyword: Optional[str] = None,
+    ) -> DanistayDocumentMarkdown:
         """
-        Retrieves a specific Danıştay decision by ID and returns its content as Markdown.
-        The /getDokuman endpoint for Danıştay returns direct HTML.
+        Retrieves a specific Danıştay decision by ID and returns its content as
+        Markdown. Upstream /getDokuman requires an `arananKelime` query
+        parameter — pass the same search keyword that produced the decision
+        (defaults to "." which upstream accepts as a wildcard-ish no-op).
         """
-        document_api_url = f"{self.DOCUMENT_ENDPOINT}?id={document_id}"
+        kw = (keyword or "").strip() or "."
+        document_api_url = (
+            f"{self.DOCUMENT_ENDPOINT}"
+            f"?arananKelime={quote(kw, safe='')}&id={document_id}"
+        )
         source_url = f"{self.BASE_URL}{document_api_url}"
         logger.info(f"DanistayApiClient: Fetching Danistay document for Markdown (ID: {document_id}) from {source_url}")
 
@@ -182,7 +206,7 @@ class DanistayApiClient:
                     source_url=source_url
                 )
 
-            markdown_content = self._convert_html_to_markdown_danistay(html_content_from_api)
+            markdown_content = await self._convert_html_async(html_content_from_api)
 
             return DanistayDocumentMarkdown(
                 document_id=document_id,

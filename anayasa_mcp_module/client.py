@@ -13,6 +13,7 @@ import logging
 import math
 import os
 import tempfile
+import asyncio
 from typing import List, Optional
 
 import httpx
@@ -150,6 +151,9 @@ class AnayasaMahkemesiApiClient:
             if temp_path and os.path.exists(temp_path):
                 os.remove(temp_path)
 
+    async def _convert_html_async(self, html_content: str) -> Optional[str]:
+        return await asyncio.to_thread(self._convert_html_to_markdown, html_content)
+
     async def get_decision_document_as_markdown(
         self, document_url: str, page_number: int = 1
     ) -> AnayasaDocumentMarkdown:
@@ -177,7 +181,7 @@ class AnayasaMahkemesiApiClient:
             )
 
         html_content = await self._fetch_decision_html(decision_id)
-        full_md = self._convert_html_to_markdown(html_content) or ""
+        full_md = await self._convert_html_async(html_content) or ""
         source_url = f"{self.BASE_URL}{self.API_MERGE_HTML.format(id=decision_id)}"
 
         # Paginate the markdown so an MCP tool can safely return it.

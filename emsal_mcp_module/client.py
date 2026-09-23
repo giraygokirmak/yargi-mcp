@@ -3,6 +3,7 @@
 import httpx
 # from bs4 import BeautifulSoup # Uncomment if needed for advanced HTML pre-processing
 from typing import Dict, Any, List, Optional
+import asyncio
 import logging
 import html
 import re
@@ -141,6 +142,9 @@ class EmsalApiClient:
         
         return markdown_text
 
+    async def _convert_html_async(self, html_content: str) -> Optional[str]:
+        return await asyncio.to_thread(self._clean_html_and_convert_to_markdown_emsal, html_content)
+
     async def get_decision_document_as_markdown(self, document_id: str) -> EmsalDocumentMarkdown:
         """
         Retrieves a specific Emsal decision by ID and returns its content as Markdown.
@@ -162,7 +166,7 @@ class EmsalApiClient:
                 logger.warning(f"EmsalApiClient: Received empty or non-string HTML in 'data' field for Emsal ID {document_id}.")
                 return EmsalDocumentMarkdown(document_id=document_id, markdown_content=None, source_url=source_url)
 
-            markdown_content = self._clean_html_and_convert_to_markdown_emsal(html_content_from_api)
+            markdown_content = await self._convert_html_async(html_content_from_api)
 
             return EmsalDocumentMarkdown(
                 document_id=document_id,

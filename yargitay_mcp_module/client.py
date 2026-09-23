@@ -3,6 +3,7 @@
 import httpx
 from bs4 import BeautifulSoup # Still needed for pre-processing HTML before markitdown
 from typing import Dict, Any, List, Optional
+import asyncio
 import logging
 import html
 import re
@@ -96,6 +97,10 @@ class YargitayOfficialApiClient:
         Takes raw HTML string (from Yargitay API 'data' field for a document),
         pre-processes it, and converts it to Markdown using MarkItDown.
         Returns only the Markdown string or None if conversion fails.
+
+        Runs in a worker thread via `_convert_html_async` because MarkItDown is
+        CPU-bound for large documents and would otherwise block the event loop
+        right through the MCP client's request timeout.
         """
         if not html_from_api_data_field:
             return None
@@ -138,6 +143,9 @@ class YargitayOfficialApiClient:
         
         return markdown_output
 
+    async def _convert_html_async(self, html_content: str) -> Optional[str]:
+        return await asyncio.to_thread(self._convert_html_to_markdown, html_content)
+
     async def get_decision_document_as_markdown(self, document_id: str) -> YargitayDocumentMarkdown:
         """
         Retrieves a specific Yargitay decision by its ID and returns its content
@@ -160,7 +168,7 @@ class YargitayOfficialApiClient:
                 logger.error(f"YargitayOfficialApiClient: 'data' field in API response is not a string or not found (ID: {document_id}).")
                 raise ValueError("Expected HTML content not found in API response's 'data' field.")
 
-            markdown_content = self._convert_html_to_markdown(html_content_from_api)
+            markdown_content = await self._convert_html_async(html_content_from_api)
 
             return YargitayDocumentMarkdown(
                 document_id=document_id,

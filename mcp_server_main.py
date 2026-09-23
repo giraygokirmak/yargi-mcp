@@ -144,12 +144,18 @@ async def search_danistay_detailed(search_query: DanistayDetailedSearchRequest) 
         raise
 
 @app.tool()
-async def get_danistay_document_markdown(document_id: str) -> DanistayDocumentMarkdown:
-    """Retrieves a specific Danıştay decision by ID and returns its content as Markdown."""
+async def get_danistay_document_markdown(
+    document_id: str,
+    keyword: Optional[str] = None,
+) -> DanistayDocumentMarkdown:
+    """Retrieves a specific Danıştay decision by ID and returns its content as Markdown.
+    Upstream requires the originating search keyword (`arananKelime`), pass `keyword`
+    from the original search_danistay_* call. Defaults to "." when omitted (upstream
+    still resolves the document)."""
     logger.info(f"Tool 'get_danistay_document_markdown' called for ID: {document_id}")
     if not document_id or not document_id.strip(): raise ValueError("Document ID must be a non-empty string for Danıştay.")
     try:
-        return await danistay_client_instance.get_decision_document_as_markdown(document_id)
+        return await danistay_client_instance.get_decision_document_as_markdown(document_id, keyword=keyword)
     except Exception as e:
         logger.exception(f"Error in tool 'get_danistay_document_markdown' for ID: {document_id}")
         raise

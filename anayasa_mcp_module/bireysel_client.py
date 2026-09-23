@@ -13,6 +13,7 @@ import logging
 import math
 import os
 import tempfile
+import asyncio
 from typing import List, Optional
 from urllib.parse import quote
 
@@ -178,6 +179,9 @@ class AnayasaBireyselBasvuruApiClient:
             logger.error(f"AnayasaBireysel: UDF->markdown fallback error: {e}")
             return None
 
+    async def _convert_udf_async(self, blob: bytes) -> Optional[str]:
+        return await asyncio.to_thread(self._convert_udf_to_markdown, blob)
+
     def _convert_bytes_to_markdown(self, blob: bytes, suffix: str) -> Optional[str]:
         """Use MarkItDown for real binary documents (pdf/docx/html). Kept for
         backwards compat; PDF output type is not exposed upstream yet."""
@@ -225,7 +229,7 @@ class AnayasaBireyselBasvuruApiClient:
             raise ValueError(f"Bireysel başvuru kararı için dosya bulunamadı (id={decision_id}).")
 
         blob = await self._download_attachment(udf_url)
-        full_md = self._convert_udf_to_markdown(blob) or ""
+        full_md = await self._convert_udf_async(blob) or ""
 
         total = len(full_md)
         chunk = self.DOCUMENT_MARKDOWN_CHUNK_SIZE

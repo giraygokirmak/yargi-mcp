@@ -181,6 +181,9 @@ class UyusmazlikApiClient:
     # ---------- Document (PDF) ----------
 
     def _convert_pdf_to_markdown_uyusmazlik(self, pdf_bytes: bytes) -> Optional[str]:
+        """Sync helper invoked via asyncio.to_thread — MarkItDown is CPU-bound
+        on multi-page PDFs and would otherwise block the event loop and trip
+        the MCP client's 30 s request timeout."""
         if not pdf_bytes:
             return None
         temp_path = None
@@ -197,6 +200,9 @@ class UyusmazlikApiClient:
             if temp_path and os.path.exists(temp_path):
                 os.remove(temp_path)
 
+    async def _convert_pdf_async(self, pdf_bytes: bytes) -> Optional[str]:
+        return await asyncio.to_thread(self._convert_pdf_to_markdown_uyusmazlik, pdf_bytes)
+
     async def get_decision_document_as_markdown(self, document_url: str) -> UyusmazlikDocumentMarkdown:
         """
         Downloads a decision from its (new) URL. The site now serves decision text
@@ -205,7 +211,10 @@ class UyusmazlikApiClient:
         """
         document_url = str(document_url)  # pydantic v2 HttpUrl is not a str
         logger.info(f"UyusmazlikApiClient: fetching document {document_url}")
+        # Give document downloads extra headroom — big PDFs + on-the-fly
+        # pdf->markdown conversion can exceed a chatty MCP gateway timeout.
         async with self._new_client() as client:
+            client.timeout = httpx.Timeout(120.0, connect=20.0)
             try:
                 resp = await client.get(document_url, headers={"Accept": "application/pdf,*/*"})
                 resp.raise_for_status()
@@ -215,10 +224,10 @@ class UyusmazlikApiClient:
 
         content_type = (resp.headers.get("content-type") or "").lower()
         if "pdf" in content_type or document_url.lower().endswith(".pdf"):
-            markdown = self._convert_pdf_to_markdown_uyusmazlik(resp.content)
+            markdown = await self._convert_pdf_async(resp.content)
         else:
             # Unexpected: old-style HTML page
-            markdown = self._convert_html_to_markdown_uyusmazlik(resp.text)
+            markdown = await self._convert_html_async(resp.text)
 
         return UyusmazlikDocumentMarkdown(source_url=document_url, markdown_content=markdown)
 
@@ -240,6 +249,9 @@ class UyusmazlikApiClient:
         finally:
             if temp_path and os.path.exists(temp_path):
                 os.remove(temp_path)
+
+    async def _convert_html_async(self, html_content: str) -> Optional[str]:
+        return await asyncio.to_thread(self._convert_html_to_markdown_uyusmazlik, html_content)
 
     async def close_client_session(self):
         logger.info("UyusmazlikApiClient: no persistent session to close.")
