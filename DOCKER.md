@@ -4,7 +4,7 @@ Türk hukuk veritabanları (Yargıtay, Danıştay, Emsal, Uyuşmazlık Mahkemesi
 
 ## Mimari
 
-- **Transport:** FastMCP 2.14.7 `streamable-http` (varsayılan), geriye dönük SSE de desteklenir.
+- **Transport:** FastMCP (>= 2) `streamable-http` (varsayılan), geriye dönük SSE de desteklenir.
 - **Giriş noktası:** `mcp_server_main.py`; transport/host/port ortam değişkenleriyle seçilir:
   - `MCP_TRANSPORT` = `streamable-http` (varsayılan) | `sse`
   - `MCP_HOST` = `0.0.0.0` (container için varsayılan; SSE modunda geriye uyumluluk için eskiden `127.0.0.1`)
@@ -62,4 +62,4 @@ MCP_TRANSPORT=sse MCP_HOST=127.0.0.1 MCP_PORT=8890 python mcp_server_main.py
 ## Notlar
 
 - Server sadece upstream resmi API/site'lere istek atar; kullanıcı verisi saklamaz. Log dosyasında tool çağrı parametreleri görünür — volume'u host paylaşımına açma.
-- `markitdown` bağımlılığı ağırdır; ileride hafifletmek istersen sadece `markitdown[pdf,docx]` alt seti denenebilir.
+- Uyuşmazlık (PDF) ve Anayasa Bireysel (UDF→docx ara adımı) akışları `markitdown[pdf]` ve `markitdown[docx]` extras'ına ihtiyaç duyar; `requirements.txt` bunları içerir. Image'ı bunlarla rebuild edin.

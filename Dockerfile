@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Önce bağımlılıklar (katman önbelleği)
 COPY requirements.txt ./
-RUN pip install --no-cache-dir "fastmcp==2.14.7" httpx beautifulsoup4 markitdown pydantic aiohttp
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY mcp_server_main.py ./
 COPY yargitay_mcp_module ./yargitay_mcp_module
@@ -13,7 +13,13 @@ COPY emsal_mcp_module ./emsal_mcp_module
 COPY uyusmazlik_mcp_module ./uyusmazlik_mcp_module
 COPY anayasa_mcp_module ./anayasa_mcp_module
 
-RUN useradd --create-home --uid 10001 yargi && chown -R yargi:yargi /app
+# Non-root yogun kullanici + log dizini izinleri.
+# `logs/` alt dizinini image build asamasinda yaratip chown ediyoruz ki
+# compose'un `yargi-logs` named-volume'u ilk mount'ta /app/logs'un sahip
+# bilgisini (yargi:yargi) miras alsin; boylece PermissionError olusmaz.
+RUN useradd --create-home --uid 10001 yargi \
+    && mkdir -p /app/logs \
+    && chown -R yargi:yargi /app
 USER yargi
 
 EXPOSE 8890

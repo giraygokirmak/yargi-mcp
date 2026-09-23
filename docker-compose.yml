@@ -4,6 +4,9 @@ services:
     image: yargi-mcp:latest
     container_name: yargi-mcp
     restart: unless-stopped
+    # Image'daki non-root kullanıcının uid/gid'i; `/app/logs` (named volume)
+    # bu kimliğe sahip olarak mount edilir, PermissionError önlenir.
+    user: "10001:10001"
     ports:
       - "8890:8890"
     environment:

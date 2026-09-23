@@ -44,7 +44,8 @@ class DanistayApiClient:
         )
 
     def _prepare_keywords_for_api(self, keywords: List[str]) -> List[str]:
-        return [f'"{k.strip("\"")}"' for k in keywords if k and k.strip()]
+        # Strip any pre-existing quotes from users, then wrap exactly once.
+        return [f'"{k.strip(chr(34))}"' for k in keywords if k and k.strip()]
 
     async def search_keyword_decisions(
         self,
