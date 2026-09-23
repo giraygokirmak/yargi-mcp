@@ -1,0 +1,17 @@
+services:
+  yargi-mcp:
+    build: .
+    image: yargi-mcp:latest
+    container_name: yargi-mcp
+    restart: unless-stopped
+    ports:
+      - "8890:8890"
+    environment:
+      MCP_TRANSPORT: streamable-http
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8890
+    volumes:
+      - yargi-logs:/app/logs
+
+volumes:
+  yargi-logs:

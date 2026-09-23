@@ -325,10 +325,18 @@ atexit.register(perform_cleanup)
 
 # --- Main Entry Point ---
 if __name__ == "__main__":
-    logger.info(f"Starting {app.name} server (main execution block)...")
+    # Standalone Docker container kalibi (23 Eyl 2026, Giray):
+    # Ortam degiskeniyle streamable-http; varsayilan SSE geriye donuk uyumluluk.
+    MCP_TRANSPORT = os.environ.get("MCP_TRANSPORT", "sse")
+    MCP_HOST = os.environ.get("MCP_HOST", "127.0.0.1")
+    MCP_PORT = int(os.environ.get("MCP_PORT", "8890"))
+    logger.info(f"Starting {app.name} server (main execution block)... transport={MCP_TRANSPORT} host={MCP_HOST} port={MCP_PORT}")
     logger.info(f"Logs will be written to: {LOG_FILE_PATH}")
     try:
-        asyncio.run(app.run_sse_async(host="127.0.0.1", port=8890, log_level="debug"))
+        if MCP_TRANSPORT in ("http", "streamable-http"):
+            asyncio.run(app.run_http_async(transport="streamable-http", host=MCP_HOST, port=MCP_PORT, log_level="info"))
+        else:
+            asyncio.run(app.run_sse_async(host=MCP_HOST, port=MCP_PORT, log_level="debug"))
     except KeyboardInterrupt:
         logger.info("Server shut down by user (KeyboardInterrupt).")
     except Exception as e:
