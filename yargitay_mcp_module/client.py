@@ -65,7 +65,15 @@ class YargitayOfficialApiClient:
             response = await self.http_client.post(self.DETAILED_SEARCH_ENDPOINT, json=request_payload)
             response.raise_for_status() # Raise an exception for HTTP 4xx or 5xx status codes
             response_json_data = response.json()
-            
+
+            # The Yargitay API returns HTTP 200 with a `metadata.FMC` business error
+            # (e.g. when no search criteria were supplied). Surface that instead of
+            # failing Pydantic validation on the empty `data` payload.
+            metadata = response_json_data.get("metadata") or {}
+            if metadata.get("FMC") == "ADALET_RUNTIME_EXCEPTION":
+                message = metadata.get("FMTE") or metadata.get("FMU") or "Yargitay API hatası"
+                raise ValueError(f"Yargitay API hatası: {message}")
+
             # Validate and parse the response using Pydantic models
             api_response = YargitayApiSearchResponse(**response_json_data)
 

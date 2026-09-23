@@ -1,6 +1,6 @@
-fastmcp
+fastmcp>=2
 httpx
 beautifulsoup4
-markitdown
-pydantic
+markitdown[pdf,docx]
+pydantic >= 2
 aiohttp 

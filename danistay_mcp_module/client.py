@@ -29,7 +29,7 @@ class DanistayApiClient:
     DETAILED_SEARCH_ENDPOINT = "/aramadetaylist"
     DOCUMENT_ENDPOINT = "/getDokuman"
 
-    def __init__(self, request_timeout: float = 30.0):
+    def __init__(self, request_timeout: float = 60.0):
         self.http_client = httpx.AsyncClient(
             base_url=self.BASE_URL,
             headers={
@@ -94,6 +94,15 @@ class DanistayApiClient:
             response.raise_for_status()
             response_json_data = response.json()
             logger.debug(f"DanistayApiClient: Raw API response from {endpoint}: {response_json_data}")
+
+            # The Danıştay API returns HTTP 200 with a `metadata.FMC` business error
+            # (e.g. when no search criteria were supplied). Surface that instead of
+            # failing Pydantic validation on the empty `data` payload.
+            metadata = response_json_data.get("metadata") or {}
+            if metadata.get("FMC") == "ADALET_RUNTIME_EXCEPTION":
+                message = metadata.get("FMTE") or metadata.get("FMU") or "Danistay API hatası"
+                raise ValueError(f"Danistay API hatası: {message}")
+
             api_response_parsed = DanistayApiResponse(**response_json_data)
             if api_response_parsed.data and api_response_parsed.data.data:
                 for decision_item in api_response_parsed.data.data:

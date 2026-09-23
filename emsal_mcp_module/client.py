@@ -76,7 +76,15 @@ class EmsalApiClient:
             response.raise_for_status()
             response_json_data = response.json()
             logger.debug(f"EmsalApiClient: Raw API response from {endpoint}: {response_json_data}")
-            
+
+            # The Emsal (UYAP) API returns HTTP 200 with a `metadata.FMC` business
+            # error (e.g. when no search criteria were supplied). Surface that
+            # instead of failing Pydantic validation on the empty `data` payload.
+            metadata = response_json_data.get("metadata") or {}
+            if metadata.get("FMC") == "ADALET_RUNTIME_EXCEPTION":
+                message = metadata.get("FMTE") or metadata.get("FMU") or "Emsal API hatası"
+                raise ValueError(f"Emsal API hatası: {message}")
+
             api_response_parsed = EmsalApiResponse(**response_json_data)
 
             if api_response_parsed.data and api_response_parsed.data.data:

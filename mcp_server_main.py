@@ -65,8 +65,7 @@ from anayasa_mcp_module.models import (
 
 app = FastMCP(
     name="TurkishLawResearchAssistantMCP",
-    instructions="MCP server for TR legal databases (Yargitay, Danistay, Emsal, Uyusmazlik, Anayasa-Norm, Anayasa-Bireysel).",
-    dependencies=["httpx", "beautifulsoup4", "markitdown", "pydantic", "aiohttp"]
+    instructions="MCP server for TR legal databases (Yargitay, Danistay, Emsal, Uyusmazlik, Anayasa-Norm, Anayasa-Bireysel)."
 )
 
 # --- API Client Instances ---
@@ -165,7 +164,7 @@ async def search_emsal_detailed_decisions(search_query: EmsalSearchRequest) -> C
         if api_response.data:
             return CompactEmsalSearchResult(
                 decisions=api_response.data.data,
-                total_records=api_response.data.totalRecords if api_response.data.totalRecords is not None else 0,
+                total_records=api_response.data.recordsTotal,
                 requested_page=search_query.page_number,
                 page_size=search_query.page_size
             )
@@ -233,7 +232,7 @@ async def search_anayasa_norm_denetimi_decisions(
 
 @app.tool()
 async def get_anayasa_norm_denetimi_document_markdown(
-    document_url: str = Field(..., description="The URL path of the AYM Norm Denetimi decision (e.g., /ND/YYYY/NN) or full https URL from normkararlarbilgibankasi.anayasa.gov.tr."),
+    document_url: str = Field(..., description="Decision id (GUID) from normkararlarbilgibankasi.anayasa.gov.tr — pass the 'decision_page_url' returned by the search tool. SPA URLs with id=... are also accepted. (Legacy /ND/YYYY/NN paths are no longer supported upstream.)"),
     page_number: Optional[int] = Field(1, ge=1, description="Page number for paginated Markdown content, 1-indexed. Default is 1 for the first 5,000 characters.") # Corrected chunk size in description
 ) -> AnayasaDocumentMarkdown:
     """
@@ -271,18 +270,17 @@ async def search_anayasa_bireysel_basvuru_report(
 
 @app.tool()
 async def get_anayasa_bireysel_basvuru_document_markdown(
-    document_url_path: str = Field(..., description="The URL path of the AYM Bireysel Başvuru decision (e.g., /BB/YYYY/NNNN) from kararlarbilgibankasi.anayasa.gov.tr."),
+    document_url_path: str = Field(..., description="Decision id (GUID) from kararlarbilgibankasi.anayasa.gov.tr — pass the 'decision_page_url' returned by the search tool. (Legacy /BB/YYYY/NNNN paths are no longer supported upstream.)"),
     page_number: Optional[int] = Field(1, ge=1, description="Page number for paginated Markdown content, 1-indexed. Default is 1 for the first 5,000 characters.")
 ) -> AnayasaBireyselBasvuruDocumentMarkdown:
     """
     Retrieves a specific Anayasa Mahkemesi Bireysel Başvuru (Individual Application) decision
-    from its URL path (e.g., /BB/YYYY/NNNN found in report results) and returns its content as paginated Markdown.
-    This is for https://kararlarbilgibankasi.anayasa.gov.tr.
-    Content is paginated if it exceeds 5,000 characters. Use 'page_number' to get subsequent pages.
+    by its decision id (GUID). Content is paginated if it exceeds 5,000 characters.
+    Use 'page_number' to get subsequent pages.
     """
-    logger.info(f"Tool 'get_anayasa_bireysel_basvuru_document_markdown' called for URL path: {document_url_path}, Page: {page_number}")
-    if not document_url_path or not document_url_path.strip() or not document_url_path.startswith("/BB/"):
-        raise ValueError("Document URL path (e.g., /BB/YYYY/NNNN) is required for Anayasa Bireysel Başvuru document retrieval.")
+    logger.info(f"Tool 'get_anayasa_bireysel_basvuru_document_markdown' called for id: {document_url_path}, Page: {page_number}")
+    if not document_url_path or not document_url_path.strip():
+        raise ValueError("Document id is required for Anayasa Bireysel Başvuru document retrieval.")
     
     current_page_to_fetch = page_number if page_number is not None and page_number >= 1 else 1
     

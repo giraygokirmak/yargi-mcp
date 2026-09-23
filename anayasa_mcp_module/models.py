@@ -130,7 +130,8 @@ class AnayasaReviewedNormInfo(BaseModel):
 class AnayasaDecisionSummary(BaseModel):
     """Model for a single Anayasa Mahkemesi (Norm Denetimi) decision summary from search results."""
     decision_reference_no: Optional[str] = None
-    decision_page_url: Optional[HttpUrl] = None
+    # Upstream now returns an opaque decision id (GUID); full URLs were removed by the SPA.
+    decision_page_url: Optional[str] = None
     keywords_found_count: Optional[int] = None
     application_type_summary: Optional[str] = None
     applicant_summary: Optional[str] = None
@@ -177,7 +178,8 @@ class AnayasaBireyselReportDecisionSummary(BaseModel):
     """Model for a single Anayasa Mahkemesi (Bireysel Başvuru) decision summary from a 'Karar Arama Raporu'."""
     title: Optional[str] = Field(None, description="Başvurunun başlığı (e.g., 'HASAN DURMUŞ Başvurusuna İlişkin Karar').")
     decision_reference_no: Optional[str] = Field(None, description="Başvuru Numarası (e.g., '2019/19126').")
-    decision_page_url: Optional[HttpUrl] = Field(None, description="URL to the full decision page.")
+    # Upstream now returns an opaque decision id (GUID); full URLs were removed by the SPA.
+    decision_page_url: Optional[str] = Field(None, description="Decision id (GUID) — pass to get_anayasa_bireysel_basvuru_document_markdown.")
     decision_type_summary: Optional[str] = Field(None, description="Karar Türü (Başvuru Sonucu) (e.g., 'Esas (İhlal)').")
     decision_making_body: Optional[str] = Field(None, description="Kararı Veren Birim (e.g., 'Genel Kurul', 'Birinci Bölüm').")
     application_date_summary: Optional[str] = Field(None, description="Başvuru Tarihi (DD/MM/YYYY).")
