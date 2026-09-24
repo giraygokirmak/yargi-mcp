@@ -180,12 +180,37 @@ class UyusmazlikApiClient:
 
     # ---------- Document (PDF) ----------
 
+    @staticmethod
+    def _pdf_text_with_pymupdf(pdf_bytes: bytes) -> str:
+        # Imported lazily so module startup stays fast for MCP stdio hosts
+        # that probe `tools/list` with a tight (≈1.5 s) budget.
+        import pymupdf
+        with pymupdf.open(stream=pdf_bytes, filetype="pdf") as doc:
+            return "\n\n".join(page.get_text("text", sort=True) for page in doc)
+
     def _convert_pdf_to_markdown_uyusmazlik(self, pdf_bytes: bytes) -> Optional[str]:
-        """Sync helper invoked via asyncio.to_thread — MarkItDown is CPU-bound
-        on multi-page PDFs and would otherwise block the event loop and trip
-        the MCP client's 30 s request timeout."""
+        """Sync helper invoked via asyncio.to_thread.
+
+        Primary path: PyMuPDF (C-based, ~1-2 s on a 300-page decision vs.
+        ~2 min with markitdown's pdfminer.six backend). Court rulings are
+        running text, so pdfminer's layout analysis buys nothing here;
+        page text is emitted in natural reading order (sort=True).
+
+        Fallback path: markitdown (kept for image-heavy edge cases where
+        extraction comes out near-empty)."""
         if not pdf_bytes:
             return None
+        try:
+            text = self._pdf_text_with_pymupdf(pdf_bytes)
+            if text and len(text.strip()) > 100:
+                return text
+            logger.warning(
+                f"UyusmazlikApiClient: PyMuPDF extracted only {len(text.strip())} chars; "
+                "retrying with markitdown."
+            )
+        except Exception as e:
+            logger.error(f"UyusmazlikApiClient: PyMuPDF extraction failed ({e}); retrying with markitdown.")
+        # Fallback: markitdown (slower, different parser)
         temp_path = None
         try:
             md = MarkItDown(enable_plugins=False)
@@ -194,7 +219,7 @@ class UyusmazlikApiClient:
                 temp_path = tmp.name
             return md.convert(temp_path).text_content
         except Exception as e:
-            logger.error(f"UyusmazlikApiClient: PDF->Markdown conversion error: {e}")
+            logger.error(f"UyusmazlikApiClient: markitdown PDF->Markdown fallback error: {e}")
             return None
         finally:
             if temp_path and os.path.exists(temp_path):
@@ -211,10 +236,7 @@ class UyusmazlikApiClient:
         """
         document_url = str(document_url)  # pydantic v2 HttpUrl is not a str
         logger.info(f"UyusmazlikApiClient: fetching document {document_url}")
-        # Give document downloads extra headroom — big PDFs + on-the-fly
-        # pdf->markdown conversion can exceed a chatty MCP gateway timeout.
         async with self._new_client() as client:
-            client.timeout = httpx.Timeout(120.0, connect=20.0)
             try:
                 resp = await client.get(document_url, headers={"Accept": "application/pdf,*/*"})
                 resp.raise_for_status()

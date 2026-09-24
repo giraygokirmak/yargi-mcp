@@ -2,5 +2,6 @@ fastmcp>=2
 httpx
 beautifulsoup4
 markitdown[pdf,docx]
+pymupdf>=1.24
 pydantic >= 2
 aiohttp 
